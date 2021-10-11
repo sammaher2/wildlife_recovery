@@ -15,7 +15,7 @@ library(splitstackshape)
 
 setwd("")
 
-#### Download Google Sheet Data from Middleton Lab Google Drive ####
+#### Download Google Sheet Data from Middleton Lab Google Drive and CLEAN THAT DIRTY DATA####
 # Notes: To make this easy, I've made the sheet public. Otherwise you need to set up a token etc and it's annoying w/ the Berkeley security system.
 
 #This let's us download the public spreadsheet without having to authorize your account:
@@ -26,7 +26,6 @@ drive_download("https://docs.google.com/spreadsheets/d/15yYexIiG3WSeTfnAwUJBgrwr
                path = "data/goog_raw.csv")
 #Save locally:
 datasheet <- fread('data/goog_raw.csv')
-
 
 #list from data cleaning document
 colsToSplit <- c("IUCN Threats", "Goals (Ecological)", "Goals (Socioeconomic)", "Goals (Admin/Logistical)",
