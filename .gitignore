@@ -1,6 +1,7 @@
 .Rproj.user
-.Rhistory
 .Rbuildignore
 .RData
 .Ruserdata
 wildlife_recovery.Rproj
+.Rhistory
+*.Rhistory

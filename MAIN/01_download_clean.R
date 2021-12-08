@@ -44,7 +44,7 @@ splitColumn <- function (colName) {
 }
 
 #merged all split up columns
-datasheetSplit <- map_dfc(colsToSplit, splitColumn)
+datasheetSplit <- map_dfc(colsToSplit, splitColumn) %>% cbind()
 
 
 
