@@ -126,6 +126,13 @@ ggplot(plot_taxa2, aes(y=data.Goals_indicator, x=data.Taxonomy))+
   theme(text = element_text(size = 15)) + ylim(0,1)
 
 
+#Logistic regression to see if case studies with a history of conflict are more likely to include HD
+Data$`Conflict/tolerance issue?` <- ifelse(Data$`Conflict/tolerance issue?`=="Yes",1,0)
+conflict_logit <- glm(Goals_indicator ~ `Conflict/tolerance issue?`, data = Data, family = "binomial")
+summary(conflict_logit)
+confint(conflict_logit)
+
+
 #Logistic regression looking at temporal trends (might want to remove case study from the 20s)
 temporal_logit <- glm(Goals_indicator ~ `Reintroduction start year`, data = Data, family = "binomial")
 summary(temporal_logit)
