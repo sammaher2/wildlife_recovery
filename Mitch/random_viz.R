@@ -43,7 +43,7 @@ goalsIndicator_zoo <- Data %>%
   mutate(freq = n / sum(n))
 
 goalsIndicator_zoo <- goalsIndicator_zoo[-c(1,2), ]
-goalsIndicator_zoo <- mutate(goalsIndicator_zoo, Group = "Zoo")
+goalsIndicator_zoo <- mutate(goalsIndicator_zoo, Group = "Zoo", posOutPercent= 0.8961039)
 
 
 
@@ -54,7 +54,7 @@ goalsIndicator_academic <- Data %>%
   mutate(freq = n / sum(n))
 
 goalsIndicator_academic <- goalsIndicator_academic[-c(1,2), ]
-goalsIndicator_academic <- mutate(goalsIndicator_academic, Group = "Academic")
+goalsIndicator_academic <- mutate(goalsIndicator_academic, Group = "Academic", posOutPercent= 0.8561644)
 
 
 #including socioeconomic goals, indicators, or outreach by government groups
@@ -64,7 +64,7 @@ goalsIndicator_government <- Data %>%
   mutate(freq = n / sum(n))
 
 goalsIndicator_government <- goalsIndicator_government[-c(1,2), ]
-goalsIndicator_government <- mutate(goalsIndicator_government, Group = "Government")
+goalsIndicator_government <- mutate(goalsIndicator_government, Group = "Government", posOutPercent= 0.8947368)
 
 #including socioeconomic goals, indicators, or outreach by indigenous groups
 goalsIndicator_indigenous <- Data %>%
@@ -73,7 +73,7 @@ goalsIndicator_indigenous <- Data %>%
   mutate(freq = n / sum(n))
 
 goalsIndicator_indigenous <- goalsIndicator_indigenous[-c(1,2), ]
-goalsIndicator_indigenous <- mutate(goalsIndicator_indigenous, Group = "Indigenous")
+goalsIndicator_indigenous <- mutate(goalsIndicator_indigenous, Group = "Indigenous", posOutPercent= 0.96875)
 
 #including socioeconomic goals, indicators, or outreach by non-profit
 goalsIndicator_non <- Data %>%
@@ -82,7 +82,7 @@ goalsIndicator_non <- Data %>%
   mutate(freq = n / sum(n))
 
 goalsIndicator_non <- goalsIndicator_non[-c(1,2), ]
-goalsIndicator_non <- mutate(goalsIndicator_non, Group = "NonProfit")
+goalsIndicator_non <- mutate(goalsIndicator_non, Group = "NonProfit", posOutPercent= 0.8734177)
 
 #including socioeconomic goals, indicators, or outreach by private company
 goalsIndicator_company <- Data %>%
@@ -91,7 +91,7 @@ goalsIndicator_company <- Data %>%
   mutate(freq = n / sum(n))
 
 goalsIndicator_company <- goalsIndicator_company[-c(1,2), ]
-goalsIndicator_company <- mutate(goalsIndicator_company, Group = "PrivateCompany")
+goalsIndicator_company <- mutate(goalsIndicator_company, Group = "PrivateCompany", posOutPercent= 0.8333333)
 
 #including socioeconomic goals, indicators, or outreach by private landowner
 goalsIndicator_landowner <- Data %>%
@@ -100,16 +100,17 @@ goalsIndicator_landowner <- Data %>%
   mutate(freq = n / sum(n))
 
 goalsIndicator_landowner <- goalsIndicator_landowner[-c(1,2), ]
-goalsIndicator_landowner <- mutate(goalsIndicator_landowner, Group = "PrivateLandowner")
+goalsIndicator_landowner <- mutate(goalsIndicator_landowner, Group = "PrivateLandowner", posOutPercent= 0.9318182)
 
 
 AllGroups <- rbind(goalsIndicator_landowner, goalsIndicator_company, goalsIndicator_non, goalsIndicator_indigenous, goalsIndicator_government, goalsIndicator_zoo, goalsIndicator_academic)
 AllGroups <- AllGroups[-c(1,3,5,7,9,11,13), ]
 
 
-ggplot(AllGroups, aes(y=freq, x=Group)) + 
-  geom_bar(position="dodge", stat="identity", fill = "purple") + ylab("Proportion of Studies that Include HD") + theme(text = element_text(size = 20))
-
+ggplot(AllGroups, aes(y=freq, x=reorder(Group, -posOutPercent), fill = posOutPercent)) + 
+  geom_bar(position="dodge", stat="identity") + 
+  ylab("Proportion of Studies that Include HD") + theme(text = element_text(size = 20)) +
+  scale_fill_gradient(low ="yellow", high = "red")
 
 
 #Logistic regression looking at temporal trends
