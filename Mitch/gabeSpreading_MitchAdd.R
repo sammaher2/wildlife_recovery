@@ -8,6 +8,8 @@ setwd("C:/Users/mitch/OneDrive/Desktop")
 #temporary datasheet without 2021 case studies
 datasheet <- fread("edited_recovery2.csv")
 
+datasheet <- read.csv("edited_recovery2.csv", check.names=FALSE)
+
 library(splitstackshape)
 
 #list from data cleaning document
@@ -286,6 +288,17 @@ datasheetSplit <- datasheetSplit %>%
   mutate(socioeconomic2_success = ifelse(!socioeconomicGoal & !socioeconomicIndicator &
                                            !outreach & socioeconomicReasons, T, F))
 
+
+#socioeconomic_lesson_difficulty: if the case study included either a socio-economic lesson learned or  
+#difficulty
+datasheetSplit <- datasheetSplit %>%
+  mutate(socioeconomic_lesson_difficulty = ifelse(socioeconomicLessons | socioeconomicDifficulty, T, F))
+
+
+#socioeconomic_noHD_Yesproblems: If the case study did not include a HD in Goals or Indicators but cited it as either
+#lesson learned or major difficulty
+datasheetSplit <- datasheetSplit %>%
+  mutate(socioeconomic_noHD_Yesproblems = ifelse(!Goals_indicator & socioeconomic_lesson_difficulty, T, F))
 
 #Outcome summaries
 datasheetSplit <- datasheetSplit %>%

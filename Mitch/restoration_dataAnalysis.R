@@ -62,10 +62,11 @@ summary(HD_logit)
 #logistic regression for continents
 continent_logit <- glm(Goals_indicator ~ as.factor(Continent), data = Data, family = "binomial")
 summary(continent_logit)
-confint(contient_logit)
+confint(continent_logit)
 c <- factorplot(continent_logit)
-print(c, digits=3, sig = FALSE)
+print(c, digits=3, sig = TRUE)
 plot(c)
+
 
 continent_logit2 <- glm(outcome_binary ~ as.factor(Continent), data = Data, family = "binomial")
 summary(continent_logit2)
@@ -83,7 +84,7 @@ Data$Continent<-factor(Data$Continent, levels=c("Oceania", "Africa", "Asia", "Eu
 cont_plot <- effect_plot(continent_logit, pred = Continent, interval = TRUE, x.label = "Continent", y.label = "Probability of a Including HD", colors = "seagreen", line.thickness = 2)
 
 
-cont_plot <- data.frame(test[1])
+cont_plot <- data.frame(cont_plot[1])
 
 ggplot(cont_plot, aes(y=data.Goals_indicator, x=data.Continent))+
   geom_point(color = "purple", size = 10)+ ## This adds the line
@@ -99,8 +100,9 @@ taxa_logit <- glm(Goals_indicator ~ as.factor(Taxonomy), data = Data, family = "
 summary(taxa_logit)
 confint(taxa_logit)
 t <- factorplot(taxa_logit)
-print(t, digits=3, sig = FALSE)
+print(t, digits=3, sig = TRUE)
 plot(t)
+
 
 taxa_logit2 <- glm(outcome_binary ~ as.factor(Taxonomy), data = Data, family = "binomial")
 summary(taxa_logit2)
@@ -116,7 +118,7 @@ Data$Taxonomy<-factor(Data$Taxonomy, levels=c("Fish", "Reptile", "Amphibian", "B
 #Plot Taxa
 plot_taxa <- effect_plot(taxa_logit, pred = Taxonomy, interval =TRUE, x.label = "Taxa", y.label = "Probability of a Including HD", colors = "seagreen", line.thickness = 2)
 
-plot_taxa2 <- data.frame(plot_taxa[1])
+plot_taxa <- data.frame(plot_taxa[1])
 
 ggplot(plot_taxa2, aes(y=data.Goals_indicator, x=data.Taxonomy))+
   geom_point(color = "purple", size = 10)+ ## This adds the line
@@ -127,11 +129,14 @@ ggplot(plot_taxa2, aes(y=data.Goals_indicator, x=data.Taxonomy))+
 
 
 #Logistic regression to see if case studies with a history of conflict are more likely to include HD
-Data$`Conflict/tolerance issue?` <- ifelse(Data$`Conflict/tolerance issue?`=="Yes",1,0)
+Data$`Conflict/tolerance issue?` <- ifelse(Data$`Conflict/tolerance issue?`=="Yes","TRUE","FALSE")
 conflict_logit <- glm(Goals_indicator ~ `Conflict/tolerance issue?`, data = Data, family = "binomial")
 summary(conflict_logit)
 confint(conflict_logit)
 
+conflict_plot <- effect_plot(conflict_logit, pred = `Conflict/tolerance issue?`, interval =TRUE, x.label = "Inclusion of HD", y.label = "Probability of a Positive Outcome", colors = "seagreen", line.thickness = 2)
+
+conflict_plot <- data.frame(conflict_plot[1])
 
 #Logistic regression looking at temporal trends (might want to remove case study from the 20s)
 temporal_logit <- glm(Goals_indicator ~ `Reintroduction start year`, data = Data, family = "binomial")
@@ -199,6 +204,17 @@ confint(threats_logit)
 c <- factorplot(threats_logit)
 print(c, digits=5, sig = TRUE)
 plot(c)
+
+plot_threat <- effect_plot(threats_logit, pred = `IUCN Threats` , interval =TRUE, x.label = "Taxa", y.label = "Probability of a Including HD", colors = "seagreen", line.thickness = 2)
+
+plot_threat <- data.frame(plot_threat[1])
+
+ggplot(plot_threat, aes(y=data.Goals_indicator, x=data.IUCN.Threats))+
+  geom_point(color = "purple", size = 10)+ ## This adds the line
+  geom_errorbar(aes(ymax=data.ymax, ymin=data.ymin), width=0.2, color = "black", size = 4)+
+  xlab("")+ ## This adds x label
+  ylab("Probability of Including HD")+ ## This adds y axis
+  theme(text = element_text(size = 15)) + ylim(0,1)
 
 threats_logit2 <- glm(outcome_binary ~ as.factor(`IUCN Threats`), data = threats, family = "binomial")
 summary(threats_logit2)
