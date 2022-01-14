@@ -107,10 +107,10 @@ AllGroups <- rbind(goalsIndicator_landowner, goalsIndicator_company, goalsIndica
 AllGroups <- AllGroups[-c(1,3,5,7,9,11,13), ]
 
 
-ggplot(AllGroups, aes(y=freq, x=reorder(Group, -posOutPercent), fill = posOutPercent)) + 
+ggplot(AllGroups, aes(y=freq, x=reorder(Group, -posOutPercent), fill = as.character(100*round(posOutPercent, 3)))) + 
   geom_bar(position="dodge", stat="identity") + 
   ylab("Proportion of Studies that Include HD") + theme(text = element_text(size = 20)) +
-  scale_fill_gradient(low ="yellow", high = "red")
+  scale_fill_brewer("Positive Outcome %", palette = "YlOrRd") + xlab("")
 
 
 #Logistic regression looking at temporal trends
