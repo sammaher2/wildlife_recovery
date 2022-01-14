@@ -1,18 +1,57 @@
-library(data.table)
-library(tidyverse)
-library(Hmisc)
-library(ggplot2)
+---
+title: "Wildlife Recovery Analysis"
+author: "Middleton Lab"
+date: "12/10/2021"
+output: html_document
+---
 
-setwd("C:/Users/mitch/OneDrive/Desktop")
+# Wildlife Recovery Project Analysis
 
-#temporary datasheet without 2021 case studies
-datasheet <- fread("edited_recovery2.csv")
+Set working directory...
+```{r setup, include = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
 
-datasheet <- read.csv("edited_recovery2.csv", check.names=FALSE)
+rm(list = ls()) 
 
-library(splitstackshape)
+wd_path <- "C:/repos/wildlife_recovery"
 
-#list from data cleaning document
+setwd(wd_path)
+
+knitr::opts_knit$set(root.dir = wd_path) 
+```
+
+Load required packages...
+```{r packages, include = FALSE, warning = FALSE}
+# Make a list of the packages we need, check whether they're installed, and install the ones we're missing...
+required.pkg <- c("tidyverse", "magrittr", "data.table", "Hmisc", "googledrive", "googlesheets4", "splitstackshape", "aod", "sjPlot", "sjmisc", "sjlabelled", "gtsummary", "jtools", "JointAI", "multcomp", "factorplot")
+pkgs.not.installed <- required.pkg[!sapply(required.pkg, function(p) require(p, character.only=T))]
+if(length(pkgs.not.installed) > 0) install.packages(pkgs.not.installed, dependencies=TRUE)
+
+# Load the required libraries...
+lapply(required.pkg, library, character.only = TRUE) 
+
+options(scipen=999)
+```
+
+## Download and Clean Data
+
+### Download Google Sheet Data 
+
+Raw data is stored in a google sheet on the Middleton Lab Google Drive.. To make this easy, I've made the sheet public. If this section isn't working, the first thing to do is to check to make sure that document is still public. This link is to data that has already been manually cleaned.
+
+```{r}
+#This let's us download the public spreadsheet without having to authorize your account:
+drive_deauth()  
+#Download edited data directly from google sheet "Edited Wildlife recovery case study data" in Datasheets folder:
+drive_download("https://docs.google.com/spreadsheets/d/15yYexIiG3WSeTfnAwUJBgrwrDk9zPtsRqdlAlVcm6fI/edit?usp=sharing",
+               overwrite = TRUE,
+               path = "data/goog_raw.csv")
+#Save locally:
+datasheet <- fread('data/goog_raw.csv')
+```
+
+### Split Columns
+```{r, warning = FALSE}
 colsToSplit <- c("IUCN Threats", "Goals (Ecological)", "Goals (Socioeconomic)", "Goals (Admin/Logistical)",
                  "Success Indicators (Ecological)", "Success Indicators (Socioeconomic)", 
                  "Success Indicators (Admin/Logistical)",  "Translocation Type", 
@@ -28,15 +67,12 @@ splitColumn <- function (colName) {
   datasheet %>% select(colName) %>% cSplit_e(1, ",", type = "character", fill = 0, drop = TRUE)
 }
 
-#merged all split up columns, changed to T/F for easier summary column generation,
-#will convert back to 1/0 at the end
-datasheetSplit <- map_dfc(colsToSplit, splitColumn) %>% mutate(across(everything(), as.logical))
+#merged all split up columns
+datasheetSplit <- map_dfc(colsToSplit, splitColumn) %>% cbind()
+```
 
-#TO DO: decide what informational columns and columns not part of "colsToSplit" to include in final sheet
-
-
-##GOALS
-
+#### Split Goals
+```{r}
 #Species Level Goal: “Reinforce Population”, “Restore Population” “Connect Populations” 
 #“Population Growth” “Behavior” “Genetics” “Distribution” “Survival” “Reproduction”
 datasheetSplit <- datasheetSplit %>%
@@ -74,9 +110,11 @@ datasheetSplit <- datasheetSplit %>%
                                         `Goals (Admin/Logistical)_Institutional` |
                                         `Goals (Admin/Logistical)_Procedural` |
                                         `Goals (Admin/Logistical)_Reduce Human Intervention`, T, F))
+```
 
-##INDICATORS
 
+#### Split Indicators
+```{r}
 #Species Level Indicator: “Reinforce Population”, “Restore Population”,
 #“Connected Populations” “Increase Population Growth” “Behavior”,
 #“Genetics” “Distribution” “Survival” “Reproduction”
@@ -145,8 +183,10 @@ datasheetSplit <- datasheetSplit %>%
                                             `Major difficulties faced (Socioeconomic)_Public Awareness` |
                                             `Major difficulties faced (Socioeconomic)_Public Involvement`, T, F))
 
-##LESSONS LEARNED
+```
 
+#### Split Lessons Learned
+```{r}
 #Species Level Lesson Learned: “Reinforce Population”, “Restore Population”,
 #“Connect Populations” “Population Growth” “Behavior” “Genetics” “Distribution”,
 #“Survival” “Reproduction”
@@ -186,9 +226,11 @@ datasheetSplit <- datasheetSplit %>%
                                            `Lessons learned (Admin/Logistic)_Institutional` |
                                            `Lessons learned (Admin/Logistic)_Procedural` |
                                            `Lessons learned (Admin/Logistic)_Reduce Human Intervention`, T, F))
+```
 
-##REASONED CITED FOR SUCCESS
 
+#### Split Reasons for Success
+```{r}
 #Species Level Success: “Reinforce Population”, “Restore Population”, “Connected Populations”,
 #“Population Growth” “Restored Behavior” “Restored Genetics” “Increased Distribution”
 #“Survival” “Reproduction”
@@ -229,9 +271,10 @@ datasheetSplit <- datasheetSplit %>%
                                            `Lessons learned (Admin/Logistic)_Institutional` |
                                            `Lessons learned (Admin/Logistic)_Procedural` |
                                            `Lessons learned (Admin/Logistic)_Reduce Human Intervention`, T, F))
+```
 
-##SOCIOECONOMIC SUMMARIES
-
+#### Socioeconomic Summaries
+```{r}
 #Goals_indicator: If the case study included a socio-economic goal or success indicator
 datasheetSplit <- datasheetSplit %>%
   mutate(Goals_indicator = ifelse(socioeconomicGoal | socioeconomicIndicator, T, F))
@@ -289,17 +332,6 @@ datasheetSplit <- datasheetSplit %>%
                                            !outreach & socioeconomicReasons, T, F))
 
 
-#socioeconomic_lesson_difficulty: if the case study included either a socio-economic lesson learned or  
-#difficulty
-datasheetSplit <- datasheetSplit %>%
-  mutate(socioeconomic_lesson_difficulty = ifelse(socioeconomicLessons | socioeconomicDifficulty, T, F))
-
-
-#socioeconomic_noHD_Yesproblems: If the case study did not include a HD in Goals or Indicators but cited it as either
-#lesson learned or major difficulty
-datasheetSplit <- datasheetSplit %>%
-  mutate(socioeconomic_noHD_Yesproblems = ifelse(!Goals_indicator & socioeconomic_lesson_difficulty, T, F))
-
 #Outcome summaries
 datasheetSplit <- datasheetSplit %>%
   mutate(outcome_binary = ifelse(`Outcome_Reproduction` |
@@ -323,3 +355,185 @@ datasheetSplit <- datasheetSplit %>%
 
 #combine datasets
 Data <- cbind(datasheet, datasheetSplit)
+```
+
+## Analyze Data!
+
+#### Percent of case studies that included HDs in each of the following categories:
+```{r}
+sum(ifelse(Data$Goals_indicator == TRUE, 1, 0))/nrow(Data)*100
+sum(ifelse(Data$Goals_indicator_outreach == TRUE, 1, 0))/nrow(Data)*100
+sum(ifelse(Data$adminLogistical_Goals_indicator == TRUE, 1, 0))/nrow(Data)*100
+sum(ifelse(Data$species_Goals_indicator == TRUE, 1, 0))/nrow(Data)*100
+sum(ifelse(Data$ecological_Goals_indicator == TRUE, 1, 0))/nrow(Data)*100
+sum(ifelse(Data$socioeconomic_difficulty == TRUE, 1, 0))/nrow(Data)*100
+sum(ifelse(Data$socioeconomic_lessonLearned == TRUE, 1, 0))/nrow(Data)*100
+```
+
+### Logit Regression Models
+
+#### Run big global model: I (Mitch) didn't actually used this though
+```{r}
+HD_logit <- glm(Goals_indicator ~ Continent + Taxonomy + `Local Conservation Status` + `IUCN Threats_Agriculture or aquaculture` + `IUCN Threats_Biological resource use` + `IUCN Threats_Climate Change or Severe Weather` + `IUCN Threats_Energy production or mining` + `IUCN Threats_Human Intrusion and Disturbance` + `IUCN Threats_Invasives or Disease` + `IUCN Threats_Natural System Modifications` + `IUCN Threats_Pollution` + `IUCN Threats_Residential/commercial development` + `IUCN Threats_Transportation and service corridors` + `Groups involved_Academic` + `Groups involved_Government` + `Groups involved_Local community/indigenous groups` + `Groups involved_Non-profit` + `Groups involved_Private company` + `Groups involved_Private landowners` + `Groups involved_Zoo` + `Site Land Type_Protected Area` +  `Site Land Type_Suburban/Rural` + `Site Land Type_Urban` + `Site Land Type_Working Land` , data = Data, family = "binomial")
+summary(HD_logit)
+```
+
+#### Logistic regression for continents
+```{r}
+continent_logit <- glm(Goals_indicator ~ as.factor(Continent), data = Data, family = "binomial")
+summary(continent_logit)
+confint(continent_logit)
+
+c <- factorplot(continent_logit)
+print(c, digits=3, sig = FALSE)
+plot(c)
+
+continent_logit2 <- glm(outcome_binary ~ as.factor(Continent), data = Data, family = "binomial")
+summary(continent_logit2)
+confint(continent_logit2)
+c <- factorplot(continent_logit2)
+print(c, digits=3, sig = FALSE)
+plot(c)
+```
+
+#### Contour Plot of Logistic Regression
+```{r, warning = FAlSE}
+#If you want to relevel anything (but not needed with the pairwise comps)
+Data$Continent<-factor(Data$Continent, levels=c("Oceania", "Africa", "Asia", 
+                                                "Europe", "North America", "South America"))
+
+
+#Plot
+cont_plot <- effect_plot(continent_logit, pred = Continent, interval = TRUE, x.label = "Continent", y.label = "Probability of a Including HD", colors = "seagreen", line.thickness = 2)
+
+
+cont_plot <- data.frame(cont_plot[1])
+
+ggplot(cont_plot, aes(y=data.Goals_indicator, x=data.Continent))+
+  geom_point(color = "purple", size = 10)+ ## This adds the line
+  geom_errorbar(aes(ymax=data.ymax, ymin=data.ymin), width=0.2, color = "black", size = 4)+
+  xlab("")+ ## This adds x label
+  ylab("Probability of Including HD")+ ## This adds y axis
+  theme(text = element_text(size = 15)) + ylim(0,1)
+```
+
+#### Logistic regression for taxonomy
+```{r}
+taxa_logit <- glm(Goals_indicator ~ as.factor(Taxonomy), data = Data, family = "binomial")
+summary(taxa_logit)
+confint(taxa_logit)
+t <- factorplot(taxa_logit)
+print(t, digits=3, sig = FALSE)
+plot(t)
+
+taxa_logit2 <- glm(outcome_binary ~ as.factor(Taxonomy), data = Data, family = "binomial")
+summary(taxa_logit2)
+confint(taxa_logit2)
+t <- factorplot(taxa_logit2)
+print(t, digits=3, sig = FALSE)
+plot(t)
+
+
+#Relevel if you want...again didn't use this
+Data$Taxonomy<-factor(Data$Taxonomy, levels=c("Fish", "Reptile", "Amphibian", "Bird", "Mammal"))
+
+#Plot Taxa
+plot_taxa <- effect_plot(taxa_logit, pred = Taxonomy, interval =TRUE, x.label = "Taxa", y.label = "Probability of a Including HD", colors = "seagreen", line.thickness = 2)
+
+plot_taxa2 <- data.frame(plot_taxa[1])
+
+ggplot(plot_taxa2, aes(y=data.Goals_indicator, x=data.Taxonomy))+
+  geom_point(color = "purple", size = 10)+ ## This adds the line
+  geom_errorbar(aes(ymax=data.ymax, ymin=data.ymin), width=0.2, color = "black", size = 4)+
+  xlab("")+ ## This adds x label
+  ylab("Probability of Including HD")+ ## This adds y axis
+  theme(text = element_text(size = 15)) + ylim(0,1)
+```
+
+#### Logistic regression to see if case studies with a history of conflict are more likely to include HD
+```{r}
+Data$`Conflict/tolerance issue?` <- ifelse(Data$`Conflict/tolerance issue?`=="Yes",1,0)
+conflict_logit <- glm(Goals_indicator ~ `Conflict/tolerance issue?`, data = Data, family = "binomial")
+summary(conflict_logit)
+confint(conflict_logit)
+
+
+#Logistic regression looking at temporal trends (might want to remove case study from the 20s)
+temporal_logit <- glm(Goals_indicator ~ `Reintroduction start year`, data = Data, family = "binomial")
+summary(temporal_logit)
+confint(temporal_logit)
+
+effect_plot(temporal_logit, pred = `Reintroduction start year`, interval = TRUE, y.label = "Probability of Including HD")
+```
+
+#### Logistic Regression looking at the inclusion of HD by positive/negative outcome
+```{r}
+outcome3_logit <- glm(outcome_binary ~ Goals_indicator, data = Data, family = "binomial")
+summary(outcome3_logit)
+confint(outcome3_logit)
+
+
+outcome_plot <- effect_plot(outcome3_logit, pred = Goals_indicator, interval =TRUE, x.label = "Inclusion of HD", y.label = "Probability of a Positive Outcome", colors = "seagreen", line.thickness = 2)
+
+outcome_plot <- data.frame(outcome_plot[1])
+
+ggplot(outcome_plot, aes(y=data.outcome_binary, x=data.Goals_indicator))+
+  geom_point(color = "purple", size = 5)+ ## This adds the line
+  geom_errorbar(aes(ymax=data.ymax, ymin=data.ymin), width=0.2, color = "black", size = 2)+
+  xlab("Inclusion of HD")+ ## This adds x label
+  ylab("Probability of a Positive Outcome")+ ## This adds y axis
+  theme(text = element_text(size = 15)) + ylim(.5,1)
+
+```
+
+#### Logisitc regression for inclusion of HD by groups involved
+```{r}
+#make groups involved long-form. Need to do this because most case studies have multiple groups involved 
+groups_involved <- select(Data, outcome_binary, Goals_indicator, `Groups involved`)
+groups_involved <- separate_rows(groups_involved, `Groups involved`, sep = ",")
+groups_involved$outcome_binary <- ifelse(groups_involved$outcome_binary=="TRUE",1,0)
+groups_involved <- groups_involved %>% mutate(across(where(is.character), str_trim))
+
+#For Indicator
+group_logit <- glm(Goals_indicator ~ as.factor(`Groups involved`), data = groups_involved, family = "binomial")
+summary(group_logit)
+confint(group_logit)
+c <- factorplot(group_logit)
+print(c, digits=5, sig = TRUE)
+plot(c)
+
+#For Outcome
+group_logit2 <- glm(outcome_binary ~ as.factor(`Groups involved`), data = groups_involved, family = "binomial")
+summary(group_logit2)
+confint(group_logit2)
+c <- factorplot(group_logit2)
+print(c, digits=5, sig = TRUE)
+plot(c)
+```
+
+#### Logisitc regression for inclusion of HD by threats
+```{r}
+#make threats long form. Need to do this because most species have multiple threats
+threats <- select(Data, Goals_indicator, `IUCN Threats`, outcome_binary)
+threats <- separate_rows(threats, `IUCN Threats`, sep = ",")
+threats$Goals_indicator <- ifelse(threats$Goals_indicator=="TRUE",1,0)
+threats <- threats %>% mutate(across(where(is.character), str_trim))
+
+#For Indicators
+threats_logit <- glm(Goals_indicator ~ as.factor(`IUCN Threats`), data = threats, family = "binomial")
+summary(threats_logit)
+confint(threats_logit)
+c <- factorplot(threats_logit)
+print(c, digits=5, sig = TRUE)
+plot(c)
+
+#For Outcomes
+threats_logit2 <- glm(outcome_binary ~ as.factor(`IUCN Threats`), data = threats, family = "binomial")
+summary(threats_logit2)
+confint(threats_logit2)
+c <- factorplot(threats_logit2)
+print(c, digits=5, sig = TRUE)
+plot(c)
+```
+
+
